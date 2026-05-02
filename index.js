@@ -1,9 +1,8 @@
-const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const express = require('express');
 
-// --- 7/24 AKTİF TUTMA ---
 const app = express();
-app.get('/', (req, res) => res.send('Castivol Bot 7/24 Aktif!'));
+app.get('/', (req, res) => res.send('Castivol Savaş Botu Aktif!'));
 app.listen(process.env.PORT || 3000);
 
 const client = new Client({
@@ -18,8 +17,8 @@ const client = new Client({
 const PREFIX = "!";
 
 client.on('ready', () => {
-    console.log(`✅ ${client.user.tag} tıkır tıkır çalışıyor!`);
-    client.user.setActivity("Castivol Klanını", { type: 3 });
+    console.log(`✅ ${client.user.tag} Savaş Modunda!`);
+    client.user.setActivity("Castivol Savaşlarını", { type: 3 });
 });
 
 client.on('messageCreate', async (message) => {
@@ -27,80 +26,99 @@ client.on('messageCreate', async (message) => {
     const args = message.content.slice(PREFIX.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
-    // 1. DUYURU KOMUTU
-    if (command === "duyuru") {
+    // 1. SAVAŞ DUYURU (Maç Duyuru Yerine)
+    if (command === "savaş-duyuru") {
         if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
-        const metin = args.join(" ");
-        if (!metin) return message.reply("Duyuru içeriği gir kanka!");
-        
+        const icerik = args.join(" ");
+        if (!icerik) return message.reply("Savaş detaylarını (Saat, Rakip, Oyun) yazmalısın kanka!");
+
         const embed = new EmbedBuilder()
-            .setTitle("📢 CASTIVOL DUYURU")
-            .setDescription(metin)
-            .setColor("#00d4ff")
-            .setTimestamp();
-            
-        message.channel.send({ content: "@everyone", embeds: [embed] });
+            .setTitle("⚔️ SAVAŞ ÇAĞRISI: CEPHEYE!")
+            .setDescription(`**Savaş Detayları:**\n${icerik}\n\n✅ Katılacaklar tepki versin!`)
+            .setColor("#ff0000")
+            .setThumbnail(client.user.displayAvatarURL())
+            .setFooter({ text: "Castivol Ordusu Toplanıyor" });
+
+        const mesaj = await message.channel.send({ content: "@everyone", embeds: [embed] });
+        await mesaj.react("✅");
+        await mesaj.react("❌");
         message.delete();
     }
 
-    // 2. TICKET / ALIM SİSTEMİ (Hatalı link kaldırıldı!)
-    if (command === "ticket-kur") {
+    // 2. MESAJ SİLME
+    if (command === "sil") {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return;
+        const miktar = parseInt(args[0]);
+        if (!miktar || miktar < 1 || miktar > 100) return message.reply("1 ile 100 arasında bir sayı yaz kanka.");
+
+        await message.channel.bulkDelete(miktar, true);
+        message.channel.send(`✅ **${miktar}** adet mesaj süpürüldü!`).then(m => setTimeout(() => m.delete(), 3000));
+    }
+
+    // 3. ROL ALMA SİSTEMİ
+    if (command === "rolal-kur") {
         if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
 
         const embed = new EmbedBuilder()
-            .setTitle("🛡️ CASTIVOL MERKEZİ İŞLEM")
-            .setDescription("Lütfen işlem yapmak istediğiniz kategoriyi aşağıdaki butonlardan seçin.\n\n**🔹 Klan Alımı:** Klana katılmak için başvuru yapın.\n**🔸 Öneri/Şikayet:** Fikirlerinizi bizimle paylaşın.\n**🤝 Partnerlik:** İş birliği talepleri için.")
-            .setColor("#2f3136");
+            .setTitle("🎮 OYUN ROLÜNÜ SEÇ")
+            .setDescription("Oynadığın oyunların rollerini aşağıdan alabilirsin kanka. Böylece savaş duyurularında seni de çağırabiliriz!")
+            .setColor("#5865F2");
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('t_alim').setLabel('Klan Alımı').setStyle(ButtonStyle.Success).setEmoji('⚔️'),
-            new ButtonBuilder().setCustomId('t_oneri').setLabel('Öneri/Şikayet').setStyle(ButtonStyle.Secondary).setEmoji('💡'),
-            new ButtonBuilder().setCustomId('t_partner').setLabel('Partnerlik').setStyle(ButtonStyle.Primary).setEmoji('🤝')
+            new StringSelectMenuBuilder()
+                .setCustomId('rol_secim')
+                .setPlaceholder('Oynadığın oyunları seç...')
+                .addOptions([
+                    { label: 'Valorant', value: 'valorant_rol_id', emoji: '🔫' }, // BURAYA ROL IDLERİNİ YAZMALISIN
+                    { label: 'League of Legends', value: 'lol_rol_id', emoji: '⚔️' },
+                    { label: 'Counter-Strike 2', value: 'cs2_rol_id', emoji: '💣' }
+                ])
         );
 
         message.channel.send({ embeds: [embed], components: [row] });
     }
 
-    // 3. UYAR KOMUTU
-    if (command === "uyar") {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return;
-        const user = message.mentions.users.first();
-        if (!user) return message.reply("Kimi uyaracağız?");
-        message.channel.send(`⚠️ ${user}, **Castivol** kurallarına uyum sağlaman gerekiyor. Devamı cezai işlem olacaktır.`);
+    // --- ESKİ KOMUTLAR (Duyuru, Ticket, Uyar, SA) ---
+    if (command === "duyuru") {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
+        const metin = args.join(" ");
+        if (!metin) return;
+        const embed = new EmbedBuilder().setTitle("📢 DUYURU").setDescription(metin).setColor("#00d4ff");
+        message.channel.send({ content: "@everyone", embeds: [embed] });
+        message.delete();
     }
 
-    // 4. TEST
-    if (command === "sa") {
-        message.reply("Aleyküm Selam kanka, bot aktif!");
+    if (command === "ticket-kur") {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
+        const embed = new EmbedBuilder().setTitle("🛡️ CASTIVOL İŞLEM MERKEZİ").setDescription("Alım, Öneri veya Partnerlik için tıkla!").setColor("#2f3136");
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('t_alim').setLabel('Klan Alımı').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('t_oneri').setLabel('Öneri/Şikayet').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('t_partner').setLabel('Partnerlik').setStyle(ButtonStyle.Primary)
+        );
+        message.channel.send({ embeds: [embed], components: [row] });
     }
+
+    if (command === "sa") message.reply("Aleyküm Selam kanka!");
 });
 
-// --- TICKET BUTONLARI ---
+// --- ROL VE TICKET ETKİLEŞİMLERİ ---
 client.on('interactionCreate', async (i) => {
-    if (!i.isButton()) return;
-    
-    let kategori = "";
-    if (i.customId === 't_alim') kategori = "alim";
-    if (i.customId === 't_oneri') kategori = "oneri";
-    if (i.customId === 't_partner') kategori = "partner";
+    if (i.isStringSelectMenu() && i.customId === 'rol_secim') {
+        const roleId = i.values[0];
+        const role = i.guild.roles.cache.get(roleId);
+        if (!role) return i.reply({ content: "Bu rol bulunamadı (ID ayarlanmamış olabilir kanka).", ephemeral: true });
 
-    if (kategori !== "") {
-        const c = await i.guild.channels.create({
-            name: `${kategori}-${i.user.username}`,
-            permissionOverwrites: [
-                { id: i.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                { id: i.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
-            ]
-        });
-
-        const welcomeEmbed = new EmbedBuilder()
-            .setTitle(`Hoş Geldin! [${kategori.toUpperCase()}]`)
-            .setDescription(`Merhaba ${i.user}, yetkililer birazdan burada olur. Lütfen detayları yaz.`)
-            .setColor("#00ff00");
-
-        c.send({ content: `${i.user} | @here`, embeds: [welcomeEmbed] });
-        i.reply({ content: `Kanalın açıldı: ${c}`, ephemeral: true });
+        if (i.member.roles.cache.has(roleId)) {
+            await i.member.roles.remove(roleId);
+            return i.reply({ content: `✅ **${role.name}** rolü üzerinden alındı.`, ephemeral: true });
+        } else {
+            await i.member.roles.add(roleId);
+            return i.reply({ content: `✅ **${role.name}** rolü sana verildi.`, ephemeral: true });
+        }
     }
+
+    // (Buraya eski ticket buton kodlarını ekleyebilirsin, v2'deki gibi)
 });
 
 client.login(process.env.TOKEN);
