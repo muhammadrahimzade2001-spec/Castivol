@@ -1,101 +1,129 @@
-const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField, ChannelType } = require('discord.js');
 const express = require('express');
-
 const app = express();
-app.get('/', (req, res) => res.send('IzaKaya Shogun Aktif! 🏮'));
+app.get('/', (req, res) => res.send('Castivol Shogun Online! 🛡️'));
 app.listen(process.env.PORT || 3000);
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent, 
+        GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers
     ]
 });
 
 const PREFIX = "!";
 
-client.on('ready', () => {
-    console.log(`✅ ${client.user.tag} Yıkım ve Yeniden İnşa İçin Hazır!`);
+client.on('ready', () => { 
+    console.log(`🛡️ ${client.user.tag} Castivol için hazır!`); 
 });
 
 client.on('messageCreate', async (message) => {
-    if (message.author.bot || !message.content.startsWith(PREFIX)) return;
+    if (message.author.bot) return;
 
-    const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-    const command = args.shift().toLowerCase();
+    // Basit test komutu
+    if (message.content === PREFIX + "ping") return message.reply("Castivol sistemleri aktif! 🛡️");
 
-    // --- 🧨 SIFIRDAN KURULUM KOMUTU ---
-    if (command === "kur") {
+    // SIFIRDAN KURULUM KOMUTU
+    if (message.content === PREFIX + "kur") {
+        // Sadece sunucu sahibi yapabilsin (Güvenlik için)
         if (message.author.id !== message.guild.ownerId) {
-            return message.reply("Bu komut o kadar tehlikeli ki sadece sunucu sahibi kullanabilir! ❌");
+            return message.reply("❌ Bu komutu sadece Castivol Shogunu (Sunucu Sahibi) kullanabilir!");
         }
 
-        message.channel.send("⚠️ **Yıkım başladı!** 10 saniye içinde her şey silinecek ve Castivol düzeni kurulacak. Sayonara...");
+        const onayEmbed = new EmbedBuilder()
+            .setTitle("⚠️ KRİTİK UYARI")
+            .setDescription("Sunucu tamamen sıfırlanacak ve Castivol düzeni kurulacak. Onaylıyor musun?")
+            .setColor("#ff0000");
 
-        setTimeout(async () => {
-            try {
-                // 1. TÜM KANALLARI SİL
-                const channels = await message.guild.channels.fetch();
-                for (const channel of channels.values()) {
-                    await channel.delete().catch(err => console.log(`Kanal silinemedi: ${err.message}`));
-                }
+        const onayBtn = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('onay_kur').setLabel('Sıfırla ve Kur').setStyle(ButtonStyle.Danger)
+        );
 
-                // 2. TÜM ROLLERİ SİL (Botun rolü ve @everyone hariç)
-                const roles = await message.guild.roles.fetch();
-                for (const role of roles.values()) {
-                    if (role.managed || role.name === "@everyone") continue;
-                    await role.delete().catch(err => console.log(`Rol silinemedi: ${err.message}`));
-                }
-
-                // 3. YENİ ROLLERİ OLUŞTUR
-                const shogunRol = await message.guild.roles.create({ name: '🛡️ Castivol Shogun', color: '#ff0000', hoist: true, permissions: [PermissionsBitField.Flags.Administrator] });
-                const yonetimRol = await message.guild.roles.create({ name: '🎎 IzaKaya Yönetim', color: '#ffb7c5', hoist: true });
-                const senpaiRol = await message.guild.roles.create({ name: '🌸 Senpai (Üye)', color: '#ffffff', hoist: true });
-
-                // 4. YENİ KATEGORİ VE KANALLARI OLUŞTUR
-                const kategori = await message.guild.channels.create({ name: '🏮 IZAKAYA MERKEZ', type: ChannelType.GuildCategory });
-
-                const textChannels = ['🏮-duyurular', '🎎-kurallar', '🍵-sohbet', '⛩️-başvuru'];
-                for (const name of textChannels) {
-                    const c = await message.guild.channels.create({ name, type: ChannelType.GuildText, parent: kategori.id });
-                    
-                    // Başvuru kanalına ticket sistemini otomatik kur
-                    if (name === '⛩️-başvuru') {
-                        const embed = new EmbedBuilder()
-                            .setTitle("🏮 Destek & Başvuru")
-                            .setDescription("İşlem başlatmak için butona bas senpai!")
-                            .setColor("#ffb7c5");
-                        const btn = new ActionRowBuilder().addComponents(
-                            new ButtonBuilder().setCustomId('izakaya_ticket').setLabel('Talep Aç').setStyle(ButtonStyle.Primary).setEmoji('🧧')
-                        );
-                        await c.send({ embeds: [embed], components: [btn] });
-                    }
-                }
-
-                await message.guild.channels.create({ name: '🔊-ses-odası', type: ChannelType.GuildVoice, parent: kategori.id });
-
-            } catch (error) {
-                console.error("Kurulum hatası:", error);
-            }
-        }, 10000); // 10 saniye bekleme süresi (vazgeçmek istersen botu kapat diye)
+        return message.channel.send({ embeds: [onayEmbed], components: [onayBtn] });
     }
 });
 
-// --- TICKET ETKİLEŞİMİ (Butonun çalışması için şart) ---
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isButton()) return;
-    if (interaction.customId === 'izakaya_ticket') {
-        const c = await interaction.guild.channels.create({
-            name: `talep-${interaction.user.username}`,
+// INTERACTION İŞLEMCİSİ
+client.on('interactionCreate', async (i) => {
+    if (!i.isButton()) return;
+
+    // KURULUM BAŞLATMA
+    if (i.customId === 'onay_kur') {
+        await i.reply({ content: "🚨 Castivol düzeni kuruluyor... Her şey siliniyor!", ephemeral: true });
+
+        // 1. KANALLARI SİL
+        const channels = await i.guild.channels.fetch();
+        for (const channel of channels.values()) {
+            await channel.delete().catch(() => {});
+        }
+
+        // 2. ROLLERİ SİL (Bot ve @everyone hariç)
+        const roles = await i.guild.roles.fetch();
+        for (const role of roles.values()) {
+            if (role.managed || role.name === "@everyone") continue;
+            await role.delete().catch(() => {});
+        }
+
+        // 3. YENİ ROLLERİ OLUŞTUR
+        const shogunRol = await i.guild.roles.create({ name: '🛡️ Castivol Shogun', color: '#ff0000', hoist: true, permissions: [PermissionsBitField.Flags.Administrator] });
+        const yonetimRol = await i.guild.roles.create({ name: '🎎 IzaKaya Yönetim', color: '#ffb7c5', hoist: true });
+        const senpaiRol = await i.guild.roles.create({ name: '🌸 Senpai', color: '#ffffff', hoist: true });
+
+        // 4. KATEGORİ VE KANALLAR
+        const kategori = await i.guild.channels.create({ name: '🛡️ CASTIVOL MERKEZ', type: ChannelType.GuildCategory });
+
+        const kanallar = ['📜-kurallar', '📢-duyurular', '🍵-sohbet', '🧧-destek-talebi'];
+        
+        for (const ad of kanallar) {
+            const c = await i.guild.channels.create({ name: ad, type: ChannelType.GuildText, parent: kategori.id });
+
+            // Destek kanalına ticket panelini at
+            if (ad === '🧧-destek-talebi') {
+                const ticketEmbed = new EmbedBuilder()
+                    .setTitle("🧧 Castivol Destek Merkezi")
+                    .setDescription("Bir sorun mu var kanka? Aşağıdaki butona bas, sana özel oda açalım!")
+                    .setColor("#2f3136");
+                
+                const ticketBtn = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('ac').setLabel('Talep Aç').setStyle(ButtonStyle.Secondary).setEmoji('🧧')
+                );
+                await c.send({ embeds: [ticketEmbed], components: [ticketBtn] });
+            }
+        }
+        
+        await i.guild.channels.create({ name: '🔊-sohbet-ses', type: ChannelType.GuildVoice, parent: kategori.id });
+    }
+
+    // TICKET AÇMA (TALEP AÇ)
+    if (i.customId === 'ac') {
+        const ticketChannel = await i.guild.channels.create({
+            name: `talep-${i.user.username}`,
+            type: ChannelType.GuildText,
             permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+                { id: i.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                { id: i.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
             ]
         });
-        await c.send(`${interaction.user} Hoş geldin!`);
-        await interaction.reply({ content: "Odan açıldı!", ephemeral: true });
+
+        const welcome = new EmbedBuilder()
+            .setTitle("🛡️ Castivol Destek")
+            .setDescription(`Selam ${i.user}, talebin oluşturuldu. Yetkililer birazdan burada olur kanka!`)
+            .setColor("#ffb7c5");
+
+        const kapatBtn = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('kapat').setLabel('Odayı Mühürle').setStyle(ButtonStyle.Danger)
+        );
+
+        await ticketChannel.send({ embeds: [welcome], components: [kapatBtn] });
+        await i.reply({ content: `✅ Odan açıldı: ${ticketChannel}`, ephemeral: true });
+    }
+
+    // TICKET KAPATMA
+    if (i.customId === 'kapat') {
+        await i.reply("🔒 Oda mühürleniyor, 5 saniye içinde duman olacak...");
+        setTimeout(() => i.channel.delete().catch(() => {}), 5000);
     }
 });
 
