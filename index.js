@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField, ChannelType, StringSelectMenuBuilder } = require('discord.js');
 const express = require('express');
 const app = express();
-app.get('/', (req, res) => res.send('Castivol Master Online! 🛡️'));
+app.get('/', (req, res) => res.send('Castivol Professional System Online! 🛡️'));
 app.listen(process.env.PORT || 3000);
 
 const client = new Client({
@@ -13,135 +13,154 @@ const client = new Client({
 
 const PREFIX = "!";
 
-client.on('ready', () => { console.log(`🛡️ ${client.user.tag} Tüm sistemlerle aktif!`); });
+client.on('ready', () => { console.log(`🛡️ ${client.user.tag} Operasyon için hazır!`); });
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
     const args = message.content.slice(PREFIX.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
-    // --- 📜 GELİŞMİŞ YARDIM MENÜSÜ ---
+    // --- 📜 PROFESYONEL REHBER (SS'DEKİ DÜZEN) ---
     if (command === "yardım") {
-        const embed = new EmbedBuilder()
-            .setTitle("🛡️ Castivol Komut Merkezi")
-            .setColor("#2f3136")
-            .setThumbnail(client.user.displayAvatarURL())
+        const helpEmbed = new EmbedBuilder()
+            .setTitle("🛡️ CASTIVOL OPERASYON MERKEZİ")
+            .setDescription("Sunucu ekosistemini yönetmek ve asayişi sağlamak için yetkili komutları aşağıdadır.")
+            .setColor("#000000")
+            .setThumbnail(message.guild.iconURL())
             .addFields(
-                { name: '🏗️ Sistem Kurulumu', value: '`!kur`: Sunucuyu sıfırdan tüm kanallar ve rollerle kurar.' },
-                { name: '🔨 Yönetim', value: '`!sil [1-100]`: Mesaj temizler.\n`!duyuru [mesaj]`: Herkese duyuru geçer.\n`!rol-ver @üye @rol`: Rütbe atar.' },
-                { name: '🛡️ Güvenlik', value: '`!ban @üye`: Sürgün eder.\n`!kick @üye`: Köyden atar.' }
-            );
-        return message.channel.send({ embeds: [embed] });
+                { name: '📊 SİSTEM YÖNETİMİ', value: '`!kur`: Tüm sunucuyu (Rol/Kanal/Ticket) profesyonel düzende inşa eder.\n`!temizle [sayı]`: Belirtilen miktarda mesajı veri tabanından siler.', inline: false },
+                { name: '⚔️ ASKERİ & SOSYAL', value: '`!duyuru`: Sunucu geneline resmi bildiri yayınlar.\n`!savaş-duyuru`: Klan savaşları ve turnuvalar için yüksek öncelikli çağrı yapar.\n`!istatistik`: Sunucunun aktiflik ve üye verilerini döker.', inline: false },
+                { name: '🎫 TICKET SİSTEMİ', value: 'Klan başvurusu, partnerlik veya şikayetler için `#işlem-merkezi` kanalını kullanın. Her talep ilgili departmana iletilir.', inline: false }
+            )
+            .setFooter({ text: "Castivol Security Solutions | 2026" });
+
+        return message.channel.send({ embeds: [helpEmbed] });
     }
 
-    // --- 📢 DUYURU ---
-    if (command === "duyuru") {
+    // --- 🧹 TEMİZLİK PROTOKOLÜ ---
+    if (command === "temizle" || command === "sil") {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return;
+        const amount = parseInt(args[0]) || 50;
+        await message.channel.bulkDelete(amount > 100 ? 100 : amount, true);
+        message.channel.send(`🧹 **${amount}** adet mesaj başarıyla imha edildi.`).then(m => setTimeout(() => m.delete(), 3000));
+    }
+
+    // --- 📢 DUYURU SİSTEMLERİ ---
+    if (command === "duyuru" || command === "savaş-duyuru") {
         if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
-        const txt = args.join(' ');
-        if (!txt) return message.reply("Duyuru metni gir kanka!");
-        const de = new EmbedBuilder().setTitle("📢 Castivol Duyurusu").setDescription(txt).setColor("#f1c40f").setTimestamp();
-        message.channel.send({ content: "@everyone", embeds: [de] });
+        const text = args.join(' ');
+        if (!text) return message.reply("İçerik girmeden duyuru yapamazsın kanka.");
+
+        const isWar = command === "savaş-duyuru";
+        const embed = new EmbedBuilder()
+            .setTitle(isWar ? "⚔️ ACİL DURUM: SAVAŞ ÇAĞRISI" : "📢 RESMİ BİLGİLENDİRME")
+            .setDescription(text)
+            .setColor(isWar ? "#ff0000" : "#ffffff")
+            .setTimestamp()
+            .setFooter({ text: `Onaylayan: ${message.author.username}` });
+
+        message.channel.send({ content: "@everyone", embeds: [embed] });
         return message.delete().catch(() => {});
     }
 
-    // --- 🧹 SİL ---
-    if (command === "sil" || command === "temizle") {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return;
-        const m = parseInt(args[0]) || 50;
-        await message.channel.bulkDelete(m > 100 ? 100 : m, true);
-        message.channel.send(`🧹 **${m}** mesaj süpürüldü!`).then(x => setTimeout(() => x.delete(), 2000));
-    }
-
-    // --- 🧨 FULL KURULUM (GÖRSELDEKİ TÜM KANALLAR) ---
+    // --- 🧨 MEGA KURULUM (FULL KANALLAR + ROLLER) ---
     if (command === "kur") {
-        if (message.author.id !== message.guild.ownerId) return message.reply("❌ Bu emir sadece Founder'a aittir!");
+        if (message.author.id !== message.guild.ownerId) return message.reply("Bu protokol sadece Founder yetkisindedir.");
 
-        const onayEmbed = new EmbedBuilder().setTitle("⚠️ SIFIRLAMA ONAYI").setDescription("Sunucu tamamen silinecek ve hiyerarşi + tüm özel kanallar kurulacak!").setColor("Red");
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('full_onay').setLabel('Sıfırla ve Kur').setStyle(ButtonStyle.Danger));
-        return message.channel.send({ embeds: [onayEmbed], components: [row] });
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('mega_onay').setLabel('Sistemi Yapılandır').setStyle(ButtonStyle.Danger)
+        );
+        message.channel.send({ content: "⚠️ **DİKKAT:** Sunucu sıfırlanacak. Onaylıyor musun?", components: [row] });
     }
 });
 
 client.on('interactionCreate', async (i) => {
-    if (i.isButton()) {
-        if (i.customId === 'full_onay') {
-            await i.reply({ content: "🚨 İnşaat başladı kanka, birazdan her şey çok güzel olacak!", ephemeral: true });
+    if (i.customId === 'mega_onay') {
+        await i.reply({ content: "🛠️ Castivol yapılandırılıyor, lütfen bekleyin...", ephemeral: true });
 
-            // 1. TEMİZLİK
-            const chs = await i.guild.channels.fetch();
-            for (const c of chs.values()) await c.delete().catch(() => {});
-            const rls = await i.guild.roles.fetch();
-            for (const r of rls.values()) { if (!r.managed && r.name !== "@everyone") await r.delete().catch(() => {}); }
+        // 1. TEMİZLİK
+        const channels = await i.guild.channels.fetch();
+        for (const c of channels.values()) await c.delete().catch(() => {});
+        const roles = await i.guild.roles.fetch();
+        for (const r of roles.values()) { if (!r.managed && r.name !== "@everyone") await r.delete().catch(() => {}); }
 
-            // 2. ROLLER (TAM LİSTE)
-            const roller = ['🛡️ Castivol', '👑 Founder', '⚔️ Co-Founder', '🛡️ Owner', '🏅 Co-Owner', '✨ Jr.Founder', '💎 Admin', '🧩 Jr.Admin', '🤝 Yardımcı', '📢 Asistan', '🛡️ AAC', '🛡️ Deneme AAC', '📜 Rehber', '📜 Deneme Rehber', '👤 Üye', '⚡ Abone'];
-            for (const rName of roller) await i.guild.roles.create({ name: rName, color: 'Random', hoist: true });
+        // 2. ÖZEL ROLLER (HİYERARŞİK)
+        const rolesData = [
+            { name: '🛡️ Castivol', color: '#000000' }, { name: '👑 founder', color: '#990000' },
+            { name: '⚔️ co founder', color: '#990000' }, { name: '🛡️ co owner', color: '#ff0000' },
+            { name: '🎖️ owner', color: '#ff0000' }, { name: '✨ jr.founder', color: '#ff4d4d' },
+            { name: '💎 admin', color: '#2ecc71' }, { name: '🧩 jr.admin', color: '#2ecc71' },
+            { name: '🤝 Yardımcı', color: '#3498db' }, { name: '📢 Asistan', color: '#3498db' },
+            { name: '🛡️ AAC', color: '#f1c40f' }, { name: '🛡️ deneme aac', color: '#f1c40f' },
+            { name: '📜 rehber', color: '#9b59b6' }, { name: '📜 deneme rehber', color: '#9b59b6' },
+            { name: '👤 üye', color: '#bdc3c7' }, { name: '⚡ abone', color: '#e67e22' }
+        ];
+        for (const r of rolesData) await i.guild.roles.create({ name: r.name, color: r.color, hoist: true });
 
-            // 3. KATEGORİ: AKTİFLİK
-            const cat_akt = await i.guild.channels.create({ name: '─── AKTİFLİK ───', type: ChannelType.GuildCategory });
-            await i.guild.channels.create({ name: '🔔-gördüysen-tıkla', parent: cat_akt.id });
-            await i.guild.channels.create({ name: '👋-hoş-geldin', parent: cat_akt.id });
+        // 3. GELİŞMİŞ KANAL YAPISI
+        const createC = (n, t, p) => i.guild.channels.create({ name: n, type: t, parent: p });
 
-            // 4. KATEGORİ: ÖNEMLİ KANALLAR (GÖRSELDEKİLER)
-            const cat_onemli = await i.guild.channels.create({ name: '─── ÖNEMLİ ───', type: ChannelType.GuildCategory });
-            await i.guild.channels.create({ name: '📢 Duyuru', parent: cat_onemli.id });
-            await i.guild.channels.create({ name: '📜 Kurallar', parent: cat_onemli.id });
-            const c_ticket = await i.guild.channels.create({ name: '🧧 Destek-Taleb', parent: cat_onemli.id });
-            await i.guild.channels.create({ name: '🔥 Klan-Partner', parent: cat_onemli.id });
-            await i.guild.channels.create({ name: '🎭 Rol-Al', parent: cat_onemli.id });
-            await i.guild.channels.create({ name: '🧩 Set-Yardım', parent: cat_onemli.id });
+        // Kategori: Merkezi Sistemler
+        const cat1 = await i.guild.channels.create({ name: '─── MERKEZİ SİSTEMLER ───', type: ChannelType.GuildCategory });
+        await createC('📢-duyurular', ChannelType.GuildText, cat1.id);
+        await createC('📜-kurallar', ChannelType.GuildText, cat1.id);
+        const c_ticket = await createC('🧧-işlem-merkezi', ChannelType.GuildText, cat1.id);
+        await createC('👋-hoşgeldin', ChannelType.GuildText, cat1.id);
 
-            // 5. KATEGORİ: ABONE ROLÜ
-            const cat_abone = await i.guild.channels.create({ name: '⚡ ABONE ROLÜ ⚡', type: ChannelType.GuildCategory });
-            await i.guild.channels.create({ name: '📂-abone-texture', parent: cat_abone.id });
-            await i.guild.channels.create({ name: '🖥️-abone-profilkod', parent: cat_abone.id });
-            await i.guild.channels.create({ name: '📷-abone-kanıt', parent: cat_abone.id });
-            await i.guild.channels.create({ name: 'ℹ️-abone-bilgi', parent: cat_abone.id });
+        // Kategori: Sosyal Alan
+        const cat2 = await i.guild.channels.create({ name: '─── SOSYAL ALAN ───', type: ChannelType.GuildCategory });
+        await createC('💬-genel-chat', ChannelType.GuildText, cat2.id);
+        await createC('📷-medya-galeri', ChannelType.GuildText, cat2.id);
+        await createC('🤖-bot-komut', ChannelType.GuildText, cat2.id);
+        await createC('🔢-sayı-sayma', ChannelType.GuildText, cat2.id);
 
-            // 6. KATEGORİ: KLAN ÖZEL
-            const cat_klan = await i.guild.channels.create({ name: '─── KLAN ÖZEL ───', type: ChannelType.GuildCategory });
-            await i.guild.channels.create({ name: '🔥-klan-duyuru', parent: cat_klan.id });
-            await i.guild.channels.create({ name: '💬-klan-sohbet', parent: cat_klan.id });
-            await i.guild.channels.create({ name: '🎁-klan-çekiliş', parent: cat_klan.id });
+        // Kategori: Abone & Teknik
+        const cat3 = await i.guild.channels.create({ name: '─── ABONE & TEKNİK ───', type: ChannelType.GuildCategory });
+        await createC('⚡-abone-kanıt', ChannelType.GuildText, cat3.id);
+        await createC('📁-özel-texture', ChannelType.GuildText, cat3.id);
+        await createC('🖥️-profil-kodları', ChannelType.GuildText, cat3.id);
 
-            // 7. KATEGORİ: MİNİ OYUN
-            const cat_mini = await i.guild.channels.create({ name: '─── MİNİ OYUN ───', type: ChannelType.GuildCategory });
-            await i.guild.channels.create({ name: '🔢-sayı-saymaca', parent: cat_mini.id });
+        // Kategori: Klan Departmanı
+        const cat4 = await i.guild.channels.create({ name: '─── KLAN DEPARTMANI ───', type: ChannelType.GuildCategory });
+        await createC('⚔️-klan-duyuru', ChannelType.GuildText, cat4.id);
+        await createC('🛡️-klan-chat', ChannelType.GuildText, cat4.id);
+        await createC('🎁-klan-çekiliş', ChannelType.GuildText, cat4.id);
 
-            // 8. SES KANALLARI (TAM LİSTE)
-            const cat_ses = await i.guild.channels.create({ name: '─── SES KANALLARI ───', type: ChannelType.GuildCategory });
-            const sesler = ['🔊 Genel', '👥 İki Kişilik', '👨‍👩‍👦 Üç Kişilik', '🎵 Müzik', '💤 AFK', '🛡️ Toplantı Odası'];
-            for (const s of sesler) await i.guild.channels.create({ name: s, type: ChannelType.GuildVoice, parent: cat_ses.id });
+        // Kategori: Ses Kanalları
+        const cat5 = await i.guild.channels.create({ name: '─── SES KOMUTANLIĞI ───', type: ChannelType.GuildCategory });
+        await createC('🔊 Genel Sohbet', ChannelType.GuildVoice, cat5.id);
+        await createC('🛡️ Toplantı Odası', ChannelType.GuildVoice, cat5.id);
+        await createC('💤 AFK Odası', ChannelType.GuildVoice, cat5.id);
 
-            // TICKET PANELİ
-            const te = new EmbedBuilder().setTitle("🧧 Castivol İşlem Merkezi").setDescription("Klan, Partner veya Destek için tıkla!").setColor("Blurple");
-            const tb = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('tk_ac').setLabel('İşlem Başlat').setStyle(ButtonStyle.Primary).setEmoji('🧧'));
-            await c_ticket.send({ embeds: [te], components: [tb] });
-        }
+        // 4. GELİŞMİŞ TICKET PANELİ
+        const tEmbed = new EmbedBuilder()
+            .setTitle("🧧 CASTIVOL İŞLEM MERKEZİ")
+            .setDescription("Yapmak istediğiniz işlem için aşağıdan kategori seçiniz.\n\n`🔥` **Klan Alımı**\n`🤝` **Partnerlik**\n`⚔️` **Merge (Birleşme)**\n`🎫` **Destek & Şikayet**")
+            .setColor("#000000");
 
-        if (i.customId === 'tk_ac') {
-            const sm = new StringSelectMenuBuilder().setCustomId('tk_secim').setPlaceholder('Konu seç...').addOptions([
+        const menu = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder().setCustomId('tk_menu').setPlaceholder('İşlem türünü belirleyin...').addOptions([
                 { label: 'Klan Alımı', value: 'klan', emoji: '🔥' },
                 { label: 'Partnerlik', value: 'partner', emoji: '🤝' },
-                { label: 'Merge', value: 'merge', emoji: '⚔️' },
-                { label: 'Destek', value: 'destek', emoji: '🎫' }
-            ]);
-            await i.reply({ content: 'Lütfen kategori seç kanka:', components: [new ActionRowBuilder().addComponents(sm)], ephemeral: true });
-        }
-
-        if (i.customId === 'kapat') {
-            await i.reply("Oda 3 saniye içinde kapatılıyor...");
-            setTimeout(() => i.channel.delete().catch(() => {}), 3000);
-        }
+                { label: 'Merge (Birleşme)', value: 'merge', emoji: '⚔️' },
+                { label: 'Destek / Şikayet', value: 'destek', emoji: '🎫' }
+            ])
+        );
+        await c_ticket.send({ embeds: [tEmbed], components: [menu] });
     }
 
-    if (i.isStringSelectMenu() && i.customId === 'tk_secim') {
-        const c = await i.guild.channels.create({
+    if (i.customId === 'tk_menu') {
+        const chan = await i.guild.channels.create({
             name: `${i.values[0]}-${i.user.username}`,
             permissionOverwrites: [{ id: i.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] }, { id: i.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }]
         });
-        await c.send({ content: `${i.user} Hoş geldin!`, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('kapat').setLabel('Kapat').setStyle(ButtonStyle.Danger))] });
-        await i.reply({ content: `✅ Kanalın açıldı: ${c}`, ephemeral: true });
+        await chan.send({ content: `${i.user} Hoş geldiniz. Yetkililer talebinizi inceleyecektir.`, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('bitir').setLabel('Talebi Sonlandır').setStyle(ButtonStyle.Danger))] });
+        await i.reply({ content: `✅ Departman odanız açıldı: ${chan}`, ephemeral: true });
+    }
+
+    if (i.customId === 'bitir') {
+        await i.reply("İşlem sonlandırılıyor...");
+        setTimeout(() => i.channel.delete(), 2000);
     }
 });
 
