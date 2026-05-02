@@ -39,12 +39,12 @@ client.on('messageCreate', async (message) => {
                 .setCustomId('rol_secim')
                 .setPlaceholder('Oyunlarını buradan seç...')
                 .addOptions([
-                    { label: 'Valorant', value: 'ROL_ID_VALORANT', emoji: '🔫' },
-                    { label: 'League of Legends', value: 'ROL_ID_LOL', emoji: '⚔️' },
-                    { label: 'Counter-Strike 2', value: 'ROL_ID_CS2', emoji: '💣' },
-                    { label: 'Roblox', value: 'ROL_ID_ROBLOX', emoji: '🧱' },
-                    { label: 'Minecraft', value: 'ROL_ID_MC', emoji: '⛏️' },
-                    { label: 'Brawl Stars', value: 'ROL_ID_BS', emoji: '⭐' }
+                    { label: 'Valorant', value: '1500078242357444649', emoji: '🔫' },
+                    { label: 'League of Legends', value: '1500078269033218088', emoji: '⚔️' },
+                    { label: 'Counter-Strike 2', value: '1500078269817556992', emoji: '💣' },
+                    { label: 'Roblox', value: '1500078273567260682', emoji: '🧱' },
+                    { label: 'Minecraft', value: '1500078274058129530', emoji: '⛏️' },
+                    { label: 'Brawl Stars', value: '1500078274242543626', emoji: '⭐' }
                 ])
         );
 
